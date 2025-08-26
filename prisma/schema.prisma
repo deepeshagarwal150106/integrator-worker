@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  zaps     Zap[]
+}
+
+model Zap {
+  id        String   @id @default(cuid())
+  userEmail    String
+  user      User     @relation(fields: [userEmail], references: [email])
+  // triggerId String
+  trigger    Trigger?
+  actions  Action[]
+  zapRuns ZapRun[]
+}
+
+model Trigger {
+  id        String   @id @default(cuid())
+  metadata Json @default("{}")
+  zapId    String @unique
+  availableTriggerId String
+  type     AvailableTriggers @relation(fields: [availableTriggerId], references: [id])
+  zap       Zap     @relation(fields: [zapId], references: [id])
+}
+
+model AvailableTriggers {
+  id        String   @id @default(cuid())
+  name      String
+  image     String @default("")
+  triggers  Trigger[]
+}
+
+model Action {
+  id        String   @id @default(cuid())
+  metadata  Json @default("{}")
+  zapId     String
+  availableActionId  String
+  type      AvailableActions @relation(fields: [availableActionId], references: [id])
+  zap       Zap     @relation(fields: [zapId], references: [id])
+  sortingOrder Int  @default(0)
+}
+
+model AvailableActions {
+  id        String   @id @default(cuid())
+  name      String
+  image     String @default("")
+  actions   Action[]
+}
+
+model ZapRun {
+  id        String   @id @default(cuid())
+  zapId     String
+  metaData  Json
+  zap       Zap      @relation(fields: [zapId], references: [id])
+  zapRunOutBox ZapRunOutBox?
+}
+
+model ZapRunOutBox {
+  id        String   @id @default(cuid())
+  zapRunId  String   @unique
+  zapRun    ZapRun   @relation(fields: [zapRunId], references: [id])
+}
+
