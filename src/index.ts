@@ -20,10 +20,10 @@ const kafka = new Kafka({
   ssl: {
     rejectUnauthorized: true, // Recommended for production
     // Read the certificate files from your 'certs' folder
-    ca: [fs.readFileSync(path.join(__dirname, 'certs/ca.pem'), 'utf-8')],
-    key: fs.readFileSync(path.join(__dirname, 'certs/service.key'), 'utf-8'),
-    cert: fs.readFileSync(path.join(__dirname, 'certs/service.cert'), 'utf-8')
-  }
+    ca: [fs.readFileSync(path.join(__dirname, "certs/ca.pem"), "utf-8")],
+    key: fs.readFileSync(path.join(__dirname, "certs/service.key"), "utf-8"),
+    cert: fs.readFileSync(path.join(__dirname, "certs/service.cert"), "utf-8"),
+  },
 });
 
 async function main() {
@@ -35,6 +35,7 @@ async function main() {
   await consumer.run({
     autoCommit: false,
     eachMessage: async ({ topic, partition, message }) => {
+      console.log("Message received:");
       console.log({
         partition: partition,
         offset: message.offset,
@@ -53,7 +54,7 @@ async function main() {
       const stage = parsedData.stage;
 
       const x = await client.zapRun.findUnique({
-        where: { id: zapRunId }
+        where: { id: zapRunId },
       });
 
       const zapRunDetails = await client.zapRun.findUnique({
@@ -77,24 +78,37 @@ async function main() {
       });
 
       console.log("processing done");
-      const currentAction = zapRunDetails?.zap.actions.find(action => action.sortingOrder === stage);
+      const currentAction = zapRunDetails?.zap.actions.find(
+        (action) => action.sortingOrder === stage
+      );
       if (!currentAction) {
         console.error("No current action found for stage:", stage);
         return;
       }
 
       const zapRunMetadata = zapRunDetails?.metaData;
-      if( currentAction.type.id === "email" ) {
+      if (currentAction.type.id === "email") {
         console.log("Processing email action");
-        const body = parse((currentAction.metadata as JsonObject).body as string,zapRunMetadata);
-        const to = parse((currentAction.metadata as JsonObject).email as string,zapRunMetadata);
+        const body = parse(
+          (currentAction.metadata as JsonObject).body as string,
+          zapRunMetadata
+        );
+        const to = parse(
+          (currentAction.metadata as JsonObject).email as string,
+          zapRunMetadata
+        );
         console.log(`Sending email to ${to} with body: ${body}`);
         await sendEmail(to, body);
-      }
-      else if (currentAction.type.id === "send-sol") {
+      } else if (currentAction.type.id === "send-sol") {
         console.log("Processing send-sol action");
-        const amount = parse((currentAction.metadata as JsonObject).amount as string, zapRunMetadata);
-        const address = parse((currentAction.metadata as JsonObject).address as string, zapRunMetadata);
+        const amount = parse(
+          (currentAction.metadata as JsonObject).amount as string,
+          zapRunMetadata
+        );
+        const address = parse(
+          (currentAction.metadata as JsonObject).address as string,
+          zapRunMetadata
+        );
         console.log(`Sending ${amount} SOL to ${address}`);
         await sendSol(address, amount);
       } else {
@@ -104,7 +118,7 @@ async function main() {
 
       const lastStage = (zapRunDetails?.zap.actions.length || 1) - 1;
       if (stage !== lastStage) {
-         await producer.send({
+        await producer.send({
           topic: TOPIC_NAME,
           messages: [
             {
@@ -129,4 +143,6 @@ async function main() {
   });
 }
 
-main();
+main().catch((e) => {
+  console.error("Error in worker:", e);
+});
