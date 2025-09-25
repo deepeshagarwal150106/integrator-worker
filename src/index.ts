@@ -7,7 +7,6 @@ import { sendEmail } from "./emial";
 import { sendSol } from "./solana";
 import fs from "fs";
 import path from "path";
-dotenv.config();
 
 const client = new PrismaClient();
 
