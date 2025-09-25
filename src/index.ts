@@ -5,6 +5,8 @@ import { parse } from "./parse";
 import dotenv from "dotenv";
 import { sendEmail } from "./emial";
 import { sendSol } from "./solana";
+import fs from "fs";
+import path from "path";
 dotenv.config();
 
 const client = new PrismaClient();
@@ -15,6 +17,13 @@ const BROKER = process.env.BROKER || "localhost:9092";
 const kafka = new Kafka({
   clientId: "outbox-processor-2",
   brokers: [BROKER],
+  ssl: {
+    rejectUnauthorized: true, // Recommended for production
+    // Read the certificate files from your 'certs' folder
+    ca: [fs.readFileSync(path.join(__dirname, 'certs/ca.pem'), 'utf-8')],
+    key: fs.readFileSync(path.join(__dirname, 'certs/service.key'), 'utf-8'),
+    cert: fs.readFileSync(path.join(__dirname, 'certs/service.cert'), 'utf-8')
+  }
 });
 
 async function main() {
